@@ -8,8 +8,22 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 from mtcnn.mtcnn import MTCNN
+
+
+
+
+# REPLACE CV2 WITH PILLOW AND PILLOW_HEIC:
+#from PIL import Image
+#from pillow_heif import register_heif_opener
+
+#register_heif_opener()
+
+
+
+
 
 
 
@@ -41,7 +55,7 @@ def main():
 
 
 def parse_args():
-    return argparse.Namespace(input_dir = r"",
+    return argparse.Namespace(input_dir = r"../Test Images",
                               output_dir = '../New Temporary Data',
                               update_every_n_files = 10,
                               detection_confidence_thr = 0.92,
@@ -103,6 +117,9 @@ def photos_video_frames_iterator(input_dir, ignore_videos = True):
                 yield file_idx, file_path, image
                 
         elif not ignore_videos:
+            # Regardless of format, try reading it as a video. If OpenCV fails, it will write to
+            # stderr but no exception is launched in python. Therefore program will keep running
+            # without interruptions, and cap.isOpened() will return False. 
             cap = cv2.VideoCapture(file_path)
 
             while cap.isOpened():

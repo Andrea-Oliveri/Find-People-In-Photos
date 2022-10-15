@@ -17,10 +17,10 @@ def get_feature_extractor(model_path):
 
 
 
-faces_dir = 'faces'
+faces_dir = '../New Temporary Data/Extracted Faces'
 tsv_path = os.path.join(faces_dir, 'faces.tsv')
-model_path = 'facenet_model'
-embeddings_save_file = 'faces_embeddings.npz'
+model_path = '../facenet_model'
+embeddings_save_file = '../New Temporary Data/faces_embeddings.npz'
 extractor_input_size = 160
 
 extractor = get_feature_extractor(model_path)
