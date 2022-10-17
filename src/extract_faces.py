@@ -2,27 +2,15 @@
 
 import os
 import argparse
-from collections import Counter
+import contextlib
 
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
+import image_io
+import utils
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-from mtcnn.mtcnn import MTCNN
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from deepface.detectors import FaceDetector
 
-
-
-
-# REPLACE CV2 WITH PILLOW AND PILLOW_HEIC:
-#from PIL import Image
-#from pillow_heif import register_heif_opener
-
-#register_heif_opener()
-
-
-
+from tqdm import tqdm
 
 
 
@@ -37,174 +25,119 @@ def main():
     os.makedirs(cropped_faces_dir, exist_ok = True)
 
     print('Counting number of files in directory...')
-    n_files, extension_counts = count_extensions_dir_children(args.input_dir)
+    n_files, extension_counts = utils.count_extensions_dir_children(args.input_dir)
 
     print('Generating extensions histogram...')
-    plot_extensions_barchart(extension_counts, extension_chart_path)
+    utils.plot_extensions_barchart(extension_counts, extension_chart_path)
 
     print('Starting face detection and extraction...')
     detect_and_extract_faces(args.input_dir, 
                              cropped_faces_dir,
                              n_files, 
-                             args.update_every_n_files,
-                             args.detection_confidence_thr,
-                             args.crop_padding)
-
-
+                             args.read_videos,
+                             args.secs_between_frames,
+                             args.detector_name)
 
 
 
 def parse_args():
-    return argparse.Namespace(input_dir = r"../Test Images",
-                              output_dir = '../New Temporary Data',
-                              update_every_n_files = 10,
-                              detection_confidence_thr = 0.92,
-                              crop_padding = 0.1)
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-i', '--input_dir',
+                        required = True,
+                        type = os.path.abspath,
+                        help = 'Input directory containing images (and optionally videos) to extract faces from.')
+
+    parser.add_argument('-o', '--output_dir',
+                        required = True,
+                        type = os.path.abspath,
+                        help = 'Output directory in which extracted faces and additional metadata will be saved.')
+
+    parser.add_argument('-v', '--read_videos', 
+                        action = argparse.BooleanOptionalAction,
+                        default = False,
+                        help = 'Whether or not to parse video frames to detect and extract faces.')
+
+    parser.add_argument('-s', '--seconds', 
+                        type = float,
+                        default = 1,
+                        dest = 'secs_between_frames',
+                        help = 'How many seconds of video to skip between two consecutively parsed frames.')
+
+    parser.add_argument('-d', '--detector', 
+                        default = 'retinaface',
+                        dest = 'detector_name',
+                        help = 'The name of the detector used to detect and extract faces from images. Must be supported by deepface.detectors.FaceDetector.')
+
+    args = parser.parse_args()
+
+    return args
 
 
 
 
+class DeepfaceDetectorWrapper:
+
+    def __init__(self, detector_name):
+        self.detector_name = detector_name
+        self.detector = FaceDetector.build_model(detector_name)
+
+    def detect_faces(self, image):
+        with open(os.devnull, 'w') as devnull_stream:
+            with contextlib.redirect_stdout(devnull_stream), contextlib.redirect_stderr(devnull_stream):
+                faces_regions = FaceDetector.detect_faces(self.detector, self.detector_name, image, align = False)
+
+        return faces_regions
 
 
 
-def get_extension(path):
-    return os.path.splitext(path)[-1].lower()
+class TSVWriter:
 
+    def __init__(self, path):
+        self.path = path
 
-def count_extensions_dir_children(topdir):
+        if os.path.isfile(self.path):
+            os.remove(self.path)
 
-    counter = Counter(get_extension(p) for p in dir_children_iter(topdir))
-    counter = dict(counter.most_common())
+    def write_line(self, *args):
+        with open(self.path, 'a') as file:
+            file.write('\t'.join(map(str, args)))
+            file.write('\n')
 
-    return sum(counter.values()), counter
-
-
-
-def dir_children_iter(topdir):
-    for root, dirs, files in os.walk(topdir):
-        for name in files:
-            yield os.path.join(root, name)
-
-
-def plot_extensions_barchart(extension_counts, output_path = 'extensions.png'):    
-    plt.bar(extension_counts.keys(), extension_counts.values())
-    plt.ylabel('Count')
-    plt.yscale('log')
-    plt.xticks(rotation = 90)
-    plt.title(f'Number of occurrences of file extensions.\n{sum(extension_counts.values())} files present in total.')
-    plt.tight_layout()
-    plt.savefig(output_path, dpi = 600)
-
-
-
-
-def photos_video_frames_iterator(input_dir, ignore_videos = True):    
+        return self
     
-    IMAGE_EXTENSIONS = ('.bmp', '.dib' , '.jpeg', '.jpg' , '.jpe'  , '.jp2' , 
-                        '.png', '.webp', '.pbm,', '.pgm,', '.ppm'  , '.pxm,', 
-                        '.pnm', '.pfm' , '.sr,' , '.ras' , '.tiff,', '.tif' , 
-                        '.exr', '.hdr,', '.pic')
-    
-    for file_idx, file_path in enumerate(dir_children_iter(input_dir)):
-
-        if get_extension(file_path) in IMAGE_EXTENSIONS:
-            
-            # As opencv does not support unicode characters in image path,
-            # We must read image bytes with numpy and then decode image with opencv.                
-            image = cv2.imdecode(np.fromfile(file_path, dtype=np.uint8), cv2.IMREAD_COLOR)
-            
-            if image is not None:
-                yield file_idx, file_path, image
-                
-        elif not ignore_videos:
-            # Regardless of format, try reading it as a video. If OpenCV fails, it will write to
-            # stderr but no exception is launched in python. Therefore program will keep running
-            # without interruptions, and cap.isOpened() will return False. 
-            cap = cv2.VideoCapture(file_path)
-
-            while cap.isOpened():
-                ret, frame = cap.read()
-                
-                if not ret:
-                    break
-                
-                yield file_idx, file_path, frame
-                
-            cap.release()
-            
-
-def show_results(image, faces):
-    color = (0, 0, 255)
-    
-    for face in faces:
-        x, y, width, height = face['box']
-        cv2.rectangle(image, (x, y), (x + width, y + height), color, thickness = 2)
-        cv2.putText(image, f"{face['confidence']:.5f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale = 0.7, color = color, thickness = 2)
-        
-        for _, center in face['keypoints'].items():
-            cv2.circle(image, center, radius = 2, color = color, thickness = -1)
-    
-    cv2.namedWindow("Results", cv2.WINDOW_AUTOSIZE) 
-    cv2.imshow('Results', image)
-    cv2.waitKey(1)
 
 
-def crop_face(image, face_box, padding):
-    x, y, width, height = face_box
-        
-    padding_x = int(padding * width)
-    padding_y = int(padding * height)
-        
-    start_x = x - padding_x
-    end_x   = x + padding_x + width
-    start_y = y - padding_y
-    end_y   = y + padding_y + height
-        
-    image_height, image_width, _ = image.shape
-    start_x = max(start_x, 0)
-    start_y = max(start_y, 0)
-    end_x   = min(end_x  , image_width)
-    end_y   = min(end_y  , image_height)
-                
-    return image[start_y:end_y, start_x:end_x]
-
-
-def bgr_rgb_convert(image):
-    return image[..., ::-1]
 
             
-def detect_and_extract_faces(input_dir, output_dir, n_files, update_every_n_files, confidence_thr = 0.92, crop_padding = 0.1):    
+def detect_and_extract_faces(input_dir, output_dir, n_files, 
+                             read_videos = False, secs_between_frames = 1, 
+                             detector_name = 'retinaface'):    
 
     tsv_path = os.path.join(output_dir, "faces.tsv")
-    with open(tsv_path, 'w') as file:
-        file.write("id\timage_path\n")
-        
-    
-    detector = MTCNN()
+    tsv_writer = TSVWriter(tsv_path).write_line('id', 'image_path')
+
+    detector = DeepfaceDetectorWrapper(detector_name)
+
     patch_id = 0
     
-    for file_idx, file_path, image in photos_video_frames_iterator(input_dir):
-        faces = detector.detect_faces(bgr_rgb_convert(image))
-        
-        for face in faces:
-            if face['confidence'] > confidence_thr:
-                patch = crop_face(image, face['box'], crop_padding)
+    with tqdm(total = n_files, ascii = True, desc = 'Files processed') as pbar:
+        for file_idx, file_path, image in image_io.photos_video_frames_iterator(input_dir, read_videos, secs_between_frames):
+            faces_regions = detector.detect_faces(image)
 
-                cv2.imwrite(os.path.join(output_dir, f"{patch_id}.png"), patch)
-                with open(tsv_path, 'a') as file:
-                    file.write(f"{patch_id}\t{file_path}\n")
-                
+            for face, _ in faces_regions:
+                image_io.imsave(face, os.path.join(output_dir, f"{patch_id}.png"))
+                tsv_writer.write_line(patch_id, file_path)
                 patch_id += 1
             
-        
-        if not file_idx % update_every_n_files:
-            print(f'Processed {file_idx} files out of {n_files}', end = '\r')
-            #show_results(image, faces)
+            pbar.n = file_idx + 1
+            pbar.refresh()
 
-    print(f'Processed all {n_files} files. Extracted {patch_id} faces.')
+        pbar.n = n_files
+        pbar.refresh()
 
-        
+    print(f'Process completed. Extracted {patch_id} faces from {n_files} files.')
+
         
 
 if __name__ == '__main__':
