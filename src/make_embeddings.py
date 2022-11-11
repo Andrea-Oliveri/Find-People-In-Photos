@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('-o', '--output_file',
                         default = None,
                         type = os.path.abspath,
-                        help = 'Output file path that will store array of embeddings for each extracted face. If this argument does not end with .npz, this extension is automatically appended.')
+                        help = 'Output file path that will store array of embeddings for each extracted face. If this argument does not end with .npy, this extension is automatically appended.')
 
     parser.add_argument('-m', '--model', 
                         default = 'Facenet512',
@@ -52,12 +52,8 @@ def parse_args():
 
     # Default for args.output_file
     if args.output_file is None:
-        args.output_file = os.path.join(os.path.dirname(args.input_dir), 'faces_embeddings.npz')
-
-    # Ensure embeddings are saved in .npz file.
-    if not args.output_file.endswith('.npz'):
-        args.output_file += '.npz'
-
+        args.output_file = os.path.join(os.path.dirname(args.input_dir), 'faces_embeddings.npy')
+        
     return args
 
 
@@ -79,7 +75,7 @@ def make_embeddings(input_dir, output_file, model, normalization):
 
     print('Saving embeddings...')
     embeddings = np.stack(embeddings, axis = 0)
-    np.savez(output_file, embeddings = embeddings)
+    np.save(output_file, embeddings, allow_pickle = False)
 
     print('Process completed.')
     
