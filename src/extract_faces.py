@@ -34,13 +34,15 @@ def main():
     utils.plot_extensions_barchart(extension_counts, extension_chart_path)
 
     print('Starting face detection and extraction...')
-    detect_and_extract_faces(args.input_dir, 
-                             cropped_faces_dir,
-                             n_files, 
-                             args.read_videos,
-                             args.secs_between_frames,
-                             args.detector_name,
-                             args.min_confidence)
+    n_faces = detect_and_extract_faces(args.input_dir, 
+                                       cropped_faces_dir,
+                                       n_files, 
+                                       args.read_videos,
+                                       args.secs_between_frames,
+                                       args.detector_name,
+                                       args.min_confidence)
+
+    print(f'Process completed. Extracted {n_faces} faces from {n_files} files.')
 
 
 
@@ -148,9 +150,9 @@ def detect_and_extract_faces(input_dir, output_dir, n_files,
         pbar.n = n_files
         pbar.refresh()
 
-    print(f'Process completed. Extracted {patch_id} faces from {n_files} files.')
+    return patch_id, n_files 
 
-        
+
 
 if __name__ == '__main__':
     main()

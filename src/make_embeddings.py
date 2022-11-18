@@ -9,11 +9,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from deepface import DeepFace
 
-from tqdm import tqdm
-
 import numpy as np
 import pandas as pd
 
+from tqdm import tqdm
 
 
 
@@ -23,7 +22,13 @@ def main():
     args = parse_args()
 
     print('Starting creating face embeddings...')
-    make_embeddings(args.input_dir, args.output_file, args.model, args.normalization)
+    make_embeddings(args.input_dir, args.model, args.normalization)
+
+    print('Saving embeddings...')
+    embeddings = np.stack(embeddings, axis = 0)
+    np.save(args.output_file, embeddings, allow_pickle = False)
+
+    print('Process completed.')
 
 
 
@@ -58,7 +63,7 @@ def parse_args():
 
 
 
-def make_embeddings(input_dir, output_file, model, normalization):
+def make_embeddings(input_dir, model, normalization):
     
     tsv_path, = [filename for filename in os.listdir(input_dir) if filename.endswith('.tsv')]
     tsv_path = os.path.join(input_dir, tsv_path)
@@ -73,11 +78,8 @@ def make_embeddings(input_dir, output_file, model, normalization):
         e = DeepFace.represent(path, model = model, detector_backend = 'skip', normalization = normalization)
         embeddings.append(e)
 
-    print('Saving embeddings...')
-    embeddings = np.stack(embeddings, axis = 0)
-    np.save(output_file, embeddings, allow_pickle = False)
-
-    print('Process completed.')
+    return embeddings
+    
     
 
 
