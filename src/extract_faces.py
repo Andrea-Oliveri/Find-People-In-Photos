@@ -23,6 +23,7 @@ def main():
     args = parse_args()
 
     extension_chart_path = os.path.join(args.output_dir, 'extensions.png')
+    faces_tsv_path       = os.path.join(args.output_dir, 'faces.tsv')
     cropped_faces_dir    = os.path.join(args.output_dir, 'Extracted Faces')
     os.makedirs(args.output_dir  , exist_ok = True)
     os.makedirs(cropped_faces_dir, exist_ok = True)
@@ -34,9 +35,10 @@ def main():
     utils.plot_extensions_barchart(extension_counts, extension_chart_path)
 
     print('Starting face detection and extraction...')
-    n_faces = detect_and_extract_faces(args.input_dir, 
+    n_faces = detect_and_extract_faces(args.input_dir,
+                                       faces_tsv_path,
                                        cropped_faces_dir,
-                                       n_files, 
+                                       n_files,
                                        args.read_videos,
                                        args.secs_between_frames,
                                        args.detector_name,
@@ -121,12 +123,11 @@ class TSVWriter:
 
 
             
-def detect_and_extract_faces(input_dir, output_dir, n_files, 
+def detect_and_extract_faces(input_dir, faces_tsv_path, output_dir, n_files, 
                              read_videos = False, secs_between_frames = 1, 
                              detector_name = 'retinaface', min_confidence = 0.9):    
 
-    tsv_path = os.path.join(output_dir, "faces.tsv")
-    tsv_writer = TSVWriter(tsv_path).write_line('id', 'image_path')
+    tsv_writer = TSVWriter(faces_tsv_path).write_line('id', 'image_path')
 
     detector = DeepfaceDetectorWrapper(detector_name)
 
@@ -150,7 +151,7 @@ def detect_and_extract_faces(input_dir, output_dir, n_files,
         pbar.n = n_files
         pbar.refresh()
 
-    return patch_id, n_files 
+    return patch_id 
 
 
 

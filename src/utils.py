@@ -4,6 +4,7 @@ import os
 from collections import Counter
 
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 
@@ -34,6 +35,22 @@ def plot_extensions_barchart(extension_counts, output_path = 'extensions.png'):
 
 
 
+def load_tsv(tsv_path):
+    if not os.path.isfile(tsv_path):
+        raise RuntimeError(f'Failed to load {tsv_path} because it is not a file!')
+
+    for encoding in ['utf-8', 'ISO-8859-1']:
+        try:
+            df = pd.read_table(tsv_path, encoding=encoding)
+            return df
+        except Exception:
+            pass
+
+    raise RuntimeError(f'Failed to load {tsv_path} due to unknown encoding!')
+
+
+
 def _get_extension(path): 
     return os.path.splitext(path)[-1].lower()
+
 
