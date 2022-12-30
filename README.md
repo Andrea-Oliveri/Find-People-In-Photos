@@ -15,17 +15,17 @@ The pipeline which is implemented by this package is as follows:
 
 To create the environment to run all components of this package, runt he following commands:
 
-´´´
+```
 conda create -n deepface python=3.10 matplotlib pandas
 conda activate deepface
 conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
 pip install tensorflow==2.10 opencv-contrib-python==4.5.5.64 Pillow pillow-heif 
 pip install cmake
 pip install deepface hdbscan 
-´´´
+```
 
 Optionally, you can also install the following packages to have access to additional models for face detection and embeddings:
 
-´´´
+```
 pip install mediapipe dlib cmake
-´´´
+```
