@@ -23,14 +23,14 @@ import utils
 def main():
     args = _parse_args()
 
-    extension_hist_path = args.output_dir / constants.EXTENSION_HIST_FILENAME
-    faces_csv_path      = args.output_dir / constants.FACES_CSV_FILENAME
-    cropped_faces_dir   = args.output_dir / constants.CROPPED_FACES_DIRNAME
+    extension_hist_path = args.work_dir / constants.EXTENSION_HIST_FILENAME
+    faces_csv_path      = args.work_dir / constants.FACES_CSV_FILENAME
+    cropped_faces_dir   = args.work_dir / constants.CROPPED_FACES_DIRNAME
     
-    if args.output_dir.is_dir():
-        if not utils.user_query_yes_no(f'Folder at "{args.output_dir}" already exists. Do you want to delete its content?'):
+    if args.work_dir.is_dir():
+        if not utils.user_query_yes_no(f'Folder at "{args.work_dir}" already exists. Do you want to delete its content?'):
             return
-        rmtree(args.output_dir)
+        rmtree(args.work_dir)
         
     cropped_faces_dir.mkdir(parents = True)
     
@@ -63,7 +63,7 @@ def _parse_args():
                         type = pathlib.Path,
                         help = 'Input directory containing images (and optionally videos) to extract faces from.')
 
-    parser.add_argument('-o', '--output_dir',
+    parser.add_argument('-w', '--work_dir',
                         required = True,
                         type = pathlib.Path,
                         help = 'Output directory in which extracted faces and additional metadata will be saved.')
@@ -129,7 +129,7 @@ def _get_csv_writer(path):
 
 
 
-def detect_and_extract_faces(input_dir, faces_csv_path, output_dir, n_files,
+def detect_and_extract_faces(input_dir, faces_csv_path, cropped_faces_dir, n_files,
                              read_videos = False, secs_between_frames = 1,
                              detector_name = 'retinaface', min_confidence = 0.9,
                              align_output_faces = True):
@@ -153,7 +153,7 @@ def detect_and_extract_faces(input_dir, faces_csv_path, output_dir, n_files,
                     if result['confidence'] < min_confidence:
                         continue
 
-                    image_io.save_image(result['face'], output_dir / f"{patch_id}.png")
+                    image_io.save_image(result['face'], cropped_faces_dir / f"{patch_id}.png")
                     csv_writer.writerow([patch_id, file_path])
                     patch_id += 1
             
