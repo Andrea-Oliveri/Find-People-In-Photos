@@ -6,18 +6,18 @@ import pandas as pd
 
 
 
-def load_tsv(tsv_path):
-    if not tsv_path.is_file(tsv_path):
-        raise RuntimeError(f'Failed to load {tsv_path} because it is not a file!')
+def load_csv(path):
+    if not path.is_file():
+        raise RuntimeError(f'Failed to load {path} because it is not a file!')
 
     for encoding in ['utf-8', 'ISO-8859-1']:
         try:
-            df = pd.read_table(tsv_path, encoding = encoding)
+            df = pd.read_csv(path, encoding = encoding)
             return df
         except Exception:
             pass
 
-    raise RuntimeError(f'Failed to load {tsv_path} due to unknown encoding!')
+    raise RuntimeError(f'Failed to load {path} due to unknown encoding!')
 
 
 
@@ -28,3 +28,10 @@ def user_query_yes_no(question):
             return strtobool(input().lower())
         except ValueError:
             print("Please respond with 'y' or 'n'.")
+
+
+
+def iter_files(dir_path):
+    for file_path in dir_path.glob("**/*"):
+        if file_path.is_file():
+            yield file_path
