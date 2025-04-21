@@ -1,42 +1,47 @@
 # -*- coding: utf-8 -*-
 
-import os
+import pathlib
 import argparse
 import contextlib
+import csv
+from shutil import rmtree
+from collections import Counter
+from os import devnull
+
+import matplotlib.pyplot as plt
+from deepface.detectors import FaceDetector
+from tqdm import tqdm
 
 import image_io
 import utils
-
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'deepface')))
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from deepface.detectors import FaceDetector
-
-from tqdm import tqdm
-
+import constants
 
 
 
 
 def main():
-    args = parse_args()
+    args = _parse_args()
 
-    extension_chart_path = os.path.join(args.output_dir, 'extensions.png')
-    faces_tsv_path       = os.path.join(args.output_dir, 'faces.tsv')
-    cropped_faces_dir    = os.path.join(args.output_dir, 'Extracted Faces')
-    os.makedirs(args.output_dir  , exist_ok = True)
-    os.makedirs(cropped_faces_dir, exist_ok = True)
-
+    extension_chart_path = args.output_dir / constants.EXTENSION_HIST_FILENAME
+    faces_csv_path       = args.output_dir / constants.FACES_TSV_FILENAME
+    cropped_faces_dir    = args.output_dir / constants.CROPPED_FACES_DIRNAME
+    
+    if args.output_dir.is_dir():
+        if not utils.user_query_yes_no(f'Folder at "{args.output_dir}" already exists. Do you want to delete its content?'):
+            return
+    
+    rmtree(args.output_dir)
+    cropped_faces_dir.mkdir(parents = True)
+    
     print('Counting number of files in directory...')
-    n_files, extension_counts = utils.count_extensions_dir_children(args.input_dir)
+    n_files, extension_counts = _count_extensions_dir_children(args.input_dir)
 
     print('Generating extensions histogram...')
-    utils.plot_extensions_barchart(extension_counts, extension_chart_path)
+    _plot_extensions_barchart(extension_counts, extension_chart_path)
 
     print('Starting face detection and extraction...')
     n_faces = detect_and_extract_faces(args.input_dir,
-                                       faces_tsv_path,
+                                       faces_csv_path,
                                        cropped_faces_dir,
                                        n_files,
                                        args.read_videos,
@@ -48,17 +53,17 @@ def main():
 
 
 
-def parse_args():
+def _parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-i', '--input_dir',
                         required = True,
-                        type = os.path.abspath,
+                        type = pathlib.Path,
                         help = 'Input directory containing images (and optionally videos) to extract faces from.')
 
     parser.add_argument('-o', '--output_dir',
                         required = True,
-                        type = os.path.abspath,
+                        type = pathlib.Path,
                         help = 'Output directory in which extracted faces and additional metadata will be saved.')
 
     parser.add_argument('-v', '--read_videos', 
@@ -88,6 +93,26 @@ def parse_args():
 
 
 
+def _count_extensions_dir_children(topdir):
+    counter = Counter(p.suffix.lower() for p in topdir.glob("**/*"))
+    counter = dict(counter.most_common())
+    return sum(counter.values()), counter
+
+
+
+def _plot_extensions_barchart(extension_counts, output_path = None):
+    if output_path is None:
+        return
+    
+    plt.bar(extension_counts.keys(), extension_counts.values())
+    plt.ylabel('Count')
+    plt.yscale('log')
+    plt.xticks(rotation = 90)
+    plt.title(f'Number of occurrences of file extensions.\n{sum(extension_counts.values())} files present in total.')
+    plt.tight_layout()
+    plt.savefig(output_path, dpi = 600)
+
+
 
 class DeepfaceDetectorWrapper:
 
@@ -96,7 +121,7 @@ class DeepfaceDetectorWrapper:
         self.detector = FaceDetector.build_model(detector_name)
 
     def detect_faces(self, image):
-        with open(os.devnull, 'w') as devnull_stream:
+        with open(devnull, 'w') as devnull_stream:
             with contextlib.redirect_stdout(devnull_stream), contextlib.redirect_stderr(devnull_stream):
                 faces_regions_scores = FaceDetector.detect_faces(self.detector, self.detector_name, image, align = False)
 
@@ -104,52 +129,40 @@ class DeepfaceDetectorWrapper:
 
 
 
-class TSVWriter:
+def _get_csv_writer(path):
+    with open(path, 'w', newline = '') as file:
+        csv_writer = csv.writer(file, delimiter = ',', quotechar = '"', quoting = csv.QUOTE_ALL)
+        yield csv_writer
 
-    def __init__(self, path):
-        self.path = path
 
-        if os.path.isfile(self.path):
-            os.remove(self.path)
 
-    def write_line(self, *args):
-        with open(self.path, 'a') as file:
-            file.write('\t'.join(map(str, args)))
-            file.write('\n')
+def detect_and_extract_faces(input_dir, faces_csv_path, output_dir, n_files,
+                             read_videos = False, secs_between_frames = 1,
+                             detector_name = 'retinaface', min_confidence = 0.9):
 
-        return self
+    with _get_csv_writer(faces_csv_path) as csv_writer:
+        csv_writer.writerow(['id', 'image_path'])
+        
+        detector = DeepfaceDetectorWrapper(detector_name)
+        patch_id = 0
     
+        with tqdm(total = n_files, ascii = True, desc = 'Files processed') as pbar:
+            for file_idx, file_path, image in image_io.photos_video_frames_iterator(input_dir, read_videos, secs_between_frames):
+                faces_regions_scores = detector.detect_faces(image)
 
+                for face, _, confidence in faces_regions_scores:
+                    if confidence < min_confidence:
+                        continue
 
-
+                    image_io.imsave(face, output_dir / f"{patch_id}.png")
+                    csv_writer.writerow([patch_id, file_path])
+                    patch_id += 1
             
-def detect_and_extract_faces(input_dir, faces_tsv_path, output_dir, n_files, 
-                             read_videos = False, secs_between_frames = 1, 
-                             detector_name = 'retinaface', min_confidence = 0.9):    
+                pbar.n = file_idx + 1
+                pbar.refresh()
 
-    tsv_writer = TSVWriter(faces_tsv_path).write_line('id', 'image_path')
-
-    detector = DeepfaceDetectorWrapper(detector_name)
-
-    patch_id = 0
-    
-    with tqdm(total = n_files, ascii = True, desc = 'Files processed') as pbar:
-        for file_idx, file_path, image in image_io.photos_video_frames_iterator(input_dir, read_videos, secs_between_frames):
-            faces_regions_scores = detector.detect_faces(image)
-
-            for face, _, confidence in faces_regions_scores:
-                if confidence < min_confidence:
-                    continue
-
-                image_io.imsave(face, os.path.join(output_dir, f"{patch_id}.png"))
-                tsv_writer.write_line(patch_id, file_path)
-                patch_id += 1
-            
-            pbar.n = file_idx + 1
+            pbar.n = n_files
             pbar.refresh()
-
-        pbar.n = n_files
-        pbar.refresh()
 
     return patch_id 
 

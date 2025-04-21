@@ -1,21 +1,14 @@
 # -*- coding: utf-8 -*-
 
+# Constants is imported first so that it sets up the environment variables.
+import constants
 
+from numpy import asarray
+from cv2 import VideoCapture, CAP_PROP_FPS, CAP_FFMPEG
 from PIL import Image, ImageOps
 import pillow_heif
 pillow_heif.register_heif_opener()
 pillow_heif.register_avif_opener()
-
-from numpy import asarray
-
-
-# This is the only way to silence OpenCV's cv2.VideoCapture errors...
-import os
-os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
-
-from cv2 import VideoCapture, CAP_PROP_FPS, CAP_FFMPEG
-
-
 
 
 
@@ -34,11 +27,10 @@ def load_image(path):
 
 
 
-
 def iter_video(path, secs_between_frames):
     # Regardless of format, try reading it as a video. If OpenCV fails, it will write to
     # stderr but no exception is launched in Python. Therefore program will keep running
-    # without interruptions, and cap.isOpened() will return False. 
+    # without interruptions, just cap.isOpened() will return False. 
     # CAP_FFMPEG is needed to allow auto-rotating frames from videos taken by iOS and Android devices.
     cap = VideoCapture(path, CAP_FFMPEG)
 

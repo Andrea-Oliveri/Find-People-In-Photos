@@ -1,3 +1,14 @@
+OBJECTIVE:
+- Either search person by examples
+OR
+- Group faces and extract those for a specific person
+
+
+
+
+
+
+
 The aim of this package is to provide a pipeline to find and copy in a separate folders all images (and optionally videos) containing a specific person from a large dataset.
 
 The pipeline which is implemented by this package is as follows:
