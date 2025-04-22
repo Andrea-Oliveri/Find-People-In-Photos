@@ -49,6 +49,7 @@ def main():
                                        args.secs_between_frames,
                                        args.detector_name,
                                        args.min_confidence,
+                                       args.min_size,
                                        args.align_output_faces)
 
     print(f'Process completed. Extracted {n_faces} faces from {n_files} files.')
@@ -89,6 +90,11 @@ def _parse_args():
                         default = 0.9,
                         help = 'Minimum confidence score to accept a face detection as valid.')
     
+    parser.add_argument('-l', '--min_size', 
+                        type = int,
+                        default = 50,
+                        help = 'Minimum number of pixels the extracted face needs to have in both width and height to be considered valid.')
+
     parser.add_argument('-a', '--align_output_faces', 
                         action = argparse.BooleanOptionalAction,
                         default = False,
@@ -130,9 +136,8 @@ def _get_csv_writer(path):
 
 
 def detect_and_extract_faces(input_dir, faces_csv_path, cropped_faces_dir, n_files,
-                             read_videos = False, secs_between_frames = 1,
-                             detector_name = 'retinaface', min_confidence = 0.9,
-                             align_output_faces = True):
+                             read_videos, secs_between_frames, detector_name, 
+                             min_confidence, min_size, align_output_faces):
 
     with _get_csv_writer(faces_csv_path) as csv_writer:
         csv_writer.writerow(['id', 'image_path'])
@@ -151,6 +156,10 @@ def detect_and_extract_faces(input_dir, faces_csv_path, cropped_faces_dir, n_fil
 
                 for result in results:
                     if result['confidence'] < min_confidence:
+                        continue
+                    
+                    height, width, _ = result['face'].shape
+                    if any(e < min_size for e in (height, width)):
                         continue
 
                     image_io.save_image(result['face'], cropped_faces_dir / f"{patch_id}.png")
