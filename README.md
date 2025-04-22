@@ -32,20 +32,19 @@ To create the environment to run all components of this package, run the followi
 conda create -n people_photo_search python=3.10 matplotlib pandas numpy<2
 conda activate people_photo_search
 conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
-pip install tensorflow==2.10 opencv-contrib-python==4.5.5.64 Pillow pillow-heif deepface==0.0.93 hdbscan
+pip install tensorflow==2.10 opencv-contrib-python==4.5.5.64 opencv-python==4.10.0.84 Pillow pillow-heif deepface==0.0.93 hdbscan
 ```
 
 Optionally, you can also install the following packages to have access to additional models for face detection and embeddings:
 
 ```
-pip install cmake
-pip install mediapipe dlib
+pip install cmake mediapipe dlib
 ```
 
 
 ## Example usage
 
-Each step in the pipeline has its own arguments which can optionally be tuned to achieve the desired outcome. The default values are what worked best in experiments with my data.
+Each step in the pipeline has its own arguments which can optionally be tuned to achieve the desired outcome. The default values are what worked reasonably well and fast in experiments on my data.
 
 You can read about all a the arguments by using `-h` when calling the script, for example:
 ```
