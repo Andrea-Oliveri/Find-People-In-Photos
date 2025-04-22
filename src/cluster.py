@@ -20,15 +20,21 @@ def main():
     cropped_faces_dir    = args.work_dir / constants.CROPPED_FACES_DIRNAME
     embeddings_file_path = args.work_dir / constants.EMBEDDINGS_FILENAME
     clustered_faces_dir  = args.work_dir / constants.CLUSTERED_FACES_DIRNAME
+    hdbscan_cache_dir    = args.work_dir / constants.HDBSCAN_CACHE_DIRNAME
 
     print('Loading embeddings...')
     embeddings = np.load(embeddings_file_path)
     
     print('Clustering...')
-    clusterer = hdbscan.HDBSCAN(min_samples              = args.min_samples,
-                                min_cluster_size         = args.min_cluster_size,
-                                metric                   = args.metric,
-                                cluster_selection_method = args.cluster_selection_method)
+    hdbscan_kwargs = {'min_samples'              : args.min_samples,
+                      'min_cluster_size'         : args.min_cluster_size,
+                      'metric'                   : args.metric,
+                      'cluster_selection_method' : args.cluster_selection_method,
+                      'memory'                   : str(hdbscan_cache_dir)}
+    if not args.store_cache:
+        hdbscan_kwargs.pop('memory')
+    
+    clusterer = hdbscan.HDBSCAN(**hdbscan_kwargs)
     labels = clusterer.fit_predict(embeddings)
 
     print(f'{np.unique(labels).size - 1} clusters found.')
@@ -65,7 +71,12 @@ def parse_args():
     parser.add_argument('-s', '--cluster_selection_method',
                         default = 'eom',
                         help = 'The method used by HDBSCAN to select clusters from the condensed tree. Can be "eom" or "leaf".')
-
+    
+    parser.add_argument('-c', '--store_cache',
+                        action = argparse.BooleanOptionalAction,
+                        default = True,
+                        help = 'Whether or not to store the cache for the HDBSCAN algorithm. This may help speed up consecutive runs.')
+    
     args = parser.parse_args()
 
     return args
