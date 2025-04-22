@@ -41,7 +41,7 @@ def main():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description = "This script will use HDBSCAN to cluster face embeddings and group face images into subfolders according to the results.")
 
     parser.add_argument('-w', '--work_dir',
                         required = True,

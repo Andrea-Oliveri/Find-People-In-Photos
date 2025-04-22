@@ -38,7 +38,7 @@ def main():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description = "This script allows to copy all original images inside which one of the faces within a chosen directory are present.")
 
     parser.add_argument('-w', '--work_dir',
                         required = True,

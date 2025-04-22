@@ -56,7 +56,7 @@ def main():
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description = "This script will find and extract in a working directory all faces detected in all photos (and optionally videos) within an input folder.")
 
     parser.add_argument('-i', '--input_dir',
                         required = True,

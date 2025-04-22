@@ -38,8 +38,8 @@ def main():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-
+    parser = argparse.ArgumentParser(description = "This script will generate embeddings for each face which was extracted in the working directory.")
+    
     parser.add_argument('-w', '--work_dir',
                         required = True,
                         type = pathlib.Path,
@@ -51,7 +51,7 @@ def parse_args():
 
     parser.add_argument('-n', '--normalization',
                         default = 'Facenet',
-                        help = 'The normalization technique used in the pre-processing step of the face images. Must be supported by deepface.commons.functions.normalize_input.')
+                        help = 'The normalization technique used in the pre-processing step of the face images. Must be supported by DeepFace.represent().')
 
     args = parser.parse_args()
     
