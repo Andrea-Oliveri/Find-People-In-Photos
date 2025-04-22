@@ -1,9 +1,3 @@
-# Data dir used by this repo
-facenet_model/
-*Temporary Data/
-TEST */
-
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
