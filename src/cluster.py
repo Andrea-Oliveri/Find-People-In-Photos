@@ -28,6 +28,7 @@ def main():
     print('Clustering...')
     hdbscan_kwargs = {'min_samples'              : args.min_samples,
                       'min_cluster_size'         : args.min_cluster_size,
+                      'cluster_selection_epsilon': args.cluster_selection_epsilon,
                       'metric'                   : args.metric,
                       'cluster_selection_method' : args.cluster_selection_method,
                       'memory'                   : str(hdbscan_cache_dir)}
@@ -47,7 +48,8 @@ def main():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description = "This script will use HDBSCAN to cluster face embeddings and group face images into subfolders according to the results.")
+    parser = argparse.ArgumentParser(description = "This script will use HDBSCAN to cluster face embeddings and group face images into subfolders according to the results.",
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-w', '--work_dir',
                         required = True,
@@ -56,14 +58,19 @@ def parse_args():
 
     parser.add_argument('-n', '--min_samples', 
                         type = int,
-                        default = 2,
+                        default = 1,
                         help = 'The number of samples in a neighbourhood for a point to be considered a core point by HDBSCAN.')
 
     parser.add_argument('-m', '--min_cluster_size', 
                         type = int,
-                        default = 10,
+                        default = 20,
                         help = 'The minimum size of clusters used by HDBSCAN.')
-
+    
+    parser.add_argument('-e', '--cluster_selection_epsilon', 
+                        type = float,
+                        default = 0.0,
+                        help = 'Distance threshold to merge clusters used by HDBSCAN.')
+    
     parser.add_argument('-d', '--metric',
                         default = 'euclidean',
                         help = 'The distance metric used by HDBSCAN.')

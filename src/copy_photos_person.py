@@ -38,7 +38,8 @@ def main():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description = "This script allows to copy all original images inside which one of the faces within a chosen directory are present.")
+    parser = argparse.ArgumentParser(description = "This script allows to copy all original images inside which one of the faces within a chosen directory are present.",,
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-w', '--work_dir',
                         required = True,
@@ -48,7 +49,7 @@ def parse_args():
     parser.add_argument('-l', '--label',
                         required = True,
                         type = str,
-                        help = 'Label of the cluster to extract original images of.)directory from step extract_faces. It contains the extracted faces and the CSV.')
+                        help = 'Label of the cluster to extract original images of.')
 
     parser.add_argument('-o', '--output_dir',
                         required = True,

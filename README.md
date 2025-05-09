@@ -44,7 +44,7 @@ pip install cmake mediapipe dlib
 
 ## Example usage
 
-Each step in the pipeline has its own arguments which can optionally be tuned to achieve the desired outcome. The default values are what worked reasonably well and fast in experiments on my data.
+Each step in the pipeline has its own arguments which can optionally be tuned to achieve the desired outcome. The default values are what worked reasonably well and fast in experiments on my data (more about this in [Performance](#performance) section).
 
 You can read about all a the arguments by using `-h` when calling the script, for example:
 ```
@@ -74,3 +74,38 @@ python src/cluster.py -w "The same work folder used in the previous step"
 ```
 python src/copy_photos_person.py -w "The same work folder used in the previous step" -l "Name of the subfolder containing the cluster" -o "Folder where to save the copied images"
 ```
+
+
+## Performance
+
+The default parameters were chosen not to minimize computational time, but rather to increase output quality. Admittedly, improvements could also be made to the code to parallelize calculations and reduce processing time.
+
+Below you can find my performance metrics I observed on my data.
+
+###### [extract_faces.py](src/extract_faces.py)
+With default parameters, an average of 2.613 images can be processed per second on a 3070 mobile GPU.
+
+The default RetinaFace model has outstanding face detection performance, to the point that some extractions may be correct but unusable in next steps.
+
+###### [make_embeddings.py](src/make_embeddings.py)
+With default parameters, an average of 5.626 face embeddings can be created per second on a 3070 mobile GPU.
+
+###### [cluster.py](src/cluster.py)
+With default parameters, it takes 4.5 minutes to cluster 38096 embeddings of dimentionality 128.
+
+After labelling 6604 out of 49885 faces, I ran a grid-search over HDBSCAN hyperparameters with a 5-fold cross validation to get the hyperparameters which showed best validation performance on my data. They are the ones set as defaults for the script.
+
+The scores, averaged across folds, are reported here:
+
+| Metric                      | Validation Score | Training Score |
+|-----------------------------|------------------|----------------|
+| Adjusted Mutual Information | 0.5727           | 0.6363         |
+| Adjusted Rand Index         | 0.2079           | 0.2699         |
+| Completeness                | 0.6327           | 0.6449         |
+| Homogeneity                 | 0.5949           | 0.6513         |
+| V-Measure                   | 0.6131           | 0.6481         |
+| Fowlkes-Mallows             | 0.3336           | 0.3687         |
+
+###### [copy_photos_person.py](src/copy_photos_person.py)
+
+The performance of this step will vary greatly depending on the speed of your storage.

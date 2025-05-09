@@ -38,7 +38,8 @@ def main():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description = "This script will generate embeddings for each face which was extracted in the working directory.")
+    parser = argparse.ArgumentParser(description = "This script will generate embeddings for each face which was extracted in the working directory.",
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument('-w', '--work_dir',
                         required = True,
@@ -46,7 +47,7 @@ def parse_args():
                         help = 'Output directory from step extract_faces. It contains the extracted faces and the CSV.')
 
     parser.add_argument('-m', '--model',
-                        default = 'Facenet512',
+                        default = 'Facenet',
                         help = 'The name of the model used to create the face embeddings. Must be supported by DeepFace.represent().')
 
     parser.add_argument('-n', '--normalization',
